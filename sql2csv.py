@@ -1,92 +1,63 @@
-# -*- coding: cp1252 -*-
+#! /usr/bin/python3
+
+import sys
 import re
-def escapeParenthesys(texto):
-	close = 0
-	while (1):
-		#print "main while"
-		open1 = texto.find("'", close+1)
-		close = texto.find("'", open1+1)
-		#print 'open '+str(open1)
-		#print 'close '+str(close)
-		
-		if open1 == -1 or close == -1:
-			return texto
-		
-		while (1):
-			#print "small while"
-			parentesis1 = texto.find('(', open1, close+1)
-			parentesis2 = texto.find(')', open1, close+1)
-			#print parentesis1
-			#print parentesis2
-			#raw_input("Press Enter to continue...")
 
-			if parentesis1 == -1 and parentesis2 == -1:
-				break
-			
-			texto = list(texto)
+def main(argv):
+    if len(argv) < 1:
+        print("Error. Usage: sql2csv <filename>")
+        sys.exit(2)
+    try:
+        f = open(argv[0], 'r', encoding='utf-8')
+    except:
+        print ("Error. file '" + argv[0] + "' doesn't exist")
+        sys.exit(3)
+    
+    currentRow = ''
+    currentFile = None
+    comillas = False
+    inRow = False
+    while True:
+        char = f.read(1)
+        #print(char)
+        #input()
+        if char == '':
+            break
+        
+        if comillas:
+            if char == "'":
+                comillas = False
+            currentRow += char
+            continue
+        
+        if char == "'":
+            comillas = True
+            currentRow += char
+            continue
+        
+        if char == "(":
+            table = getTableName(currentRow)
+            if table:
+                currentFile = open(table + '.csv', 'a')
+            inRow = True
+            currentRow = ""
+            continue
+            
+        if char == ")":
+            currentFile.write(currentRow + '\n')
+            currentRow = ""
+            
+        currentRow += char
+    #fin while
+#fin main
+            
+def getTableName(text):
+    text = text.lower()
+    m = re.search('insert into ([^\s]*)', text)
+    if m:
+        return m.group(1)
+    return None
+    
 
-			if parentesis1 != -1:
-				texto[parentesis1] = '·';
-			if parentesis2 != -1:
-				texto[parentesis2] = '·';
-				
-			texto = "".join(texto)
-			
-
-f = open("C:\MigracionesOscar\datos\sonia ramos\SONIA RAMOS PEÑIN_mn 29-07-2015.part1_20150730_140404_Comprobación_de_Datos\DocumentosJudigest.sql", 'r')
-tablaAbierta = "";
-reInsert = re.compile(r'.*?insert into .*? values', re.DOTALL) # ? -> no greedy
-reTabla = re.compile(r'.*?insert into ([^\s]*)', re.DOTALL)
-reValue = re.compile(r'(\(.*?\))')
-l = ''
-tabla = ''
-while (True):
-	#print "hola"
-	if len(l) < 59000004:
-		lnuevo = f.read(20000).lower()
-		l += lnuevo
-		#print l
-		raw_input("Press Enter to continue...")
-		l = escapeParenthesys(l)
-		#print l
-		#raw_input("Press Enter to continue...")
-	if l == "":
-		break
-	if tabla == '':
-		if lnuevo == '':
-			break
-		m = reTabla.match(l)
-		if m == None:
-			continue
-		tabla = m.group(1).replace("`", "")
-		
-		print tabla
-		output = open(tabla + ".csv", 'a')
-		l = reInsert.sub("", l, 1)
-		print "creado archivo " + tabla + ".csv"
-	if l.find(';') != -1:
-		print "hemos encontrado punto y coma;"
-		valuesStr = l[:l.find(';')] # cogemos solo hasta el punto y coma
-		l = l[l.find(';')+1:] # de l eliminamos lo que ya vamos a coger
-		tabla = ''
-	else:
-		# hay que seguir parseando
-		valuesStr = l;
-		m = re.search(r'\([^\)]*$', l)
-		if (m == None):
-			print "Error near (, parenthesis between quotes not handles\n"
-			print l
-			l = ''
-		else:
-			l = m.group()
-	
-	values = re.findall(r'\(.*?\)', valuesStr)
-	for value in values:
-		#print value
-		value = value.replace('(', '')
-		value = value.replace(')', '')
-		output.write('\n' + value) # TODO: hay que volver a reemplazar los caracteres especiales
-		
-
-				
-			
+if __name__ == "__main__":
+   main(sys.argv[1:])
