@@ -3,6 +3,9 @@
 import sys
 import re
 
+MAX_BYTES = 524288 # max bytes stored in memory befor writting to disk (512KB)
+MAX_MEMORY = 1073741824 # max memory stored before crash (1GB)
+
 def main(argv):
     if len(argv) < 1:
         print("Error. Usage: sql2csv <filename>")
@@ -46,8 +49,17 @@ def main(argv):
         if char == ")":
             currentFile.write(currentRow + '\n')
             currentRow = ""
+            inRow = False
             
+        
         currentRow += char
+        if len(currentRow) > MAX_BYTES:
+            if inRow:
+                currentFile.write(currentRow)
+                currentRow = ''
+            elif len(currentRow) > MAX_MEMORY:
+                raise Exception('Max memory reached parsing text between rows')
+                
     #fin while
 #fin main
             
